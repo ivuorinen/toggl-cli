@@ -3,12 +3,11 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"github.com/ville6000/toggl-cli/internal/api"
+	"github.com/ville6000/toggl-cli/internal/utils"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var startCmd = &cobra.Command{
@@ -16,16 +15,7 @@ var startCmd = &cobra.Command{
 	Short: "Start a new time entry",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
-		token := viper.GetString("toggl.token")
-		if token == "" {
-			log.Fatal("Missing toggl.token in config file")
-		}
-
-		workspaceId := viper.GetInt("toggl.workspace_id")
-		if workspaceId == 0 {
-			log.Fatal("Missing toggl.workspace_id in config file")
-		}
-
+		token, workspaceId := utils.GetTogglConfig()
 		description := args[0]
 		projectName, err := cmd.Flags().GetString("project")
 		if err != nil {
@@ -42,18 +32,7 @@ var startCmd = &cobra.Command{
 			}
 		}
 
-		timeEntry := api.TimeEntry{
-			CreatedWith: "toggl-cli",
-			Description: description,
-			Tags:        []string{},
-			Billable:    false,
-			WorkspaceID: workspaceId,
-			Duration:    -1,
-			Start:       time.Now().Format(time.RFC3339),
-			Stop:        nil,
-			ProjectID:   projectId,
-		}
-
+		timeEntry := client.NewTimeEntry(description, workspaceId, projectId, false)
 		_, err = client.CreateTimeEntry(workspaceId, timeEntry)
 		if err != nil {
 			log.Fatal("Failed to create time entry:", err)

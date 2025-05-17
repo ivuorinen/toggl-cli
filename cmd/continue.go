@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
-	"github.com/ville6000/toggl-cli/internal/api"
 	"log"
-	"time"
+
+	"github.com/ville6000/toggl-cli/internal/api"
+	"github.com/ville6000/toggl-cli/internal/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -15,16 +15,7 @@ var continueCmd = &cobra.Command{
 	Short: "Continue latest timer entry",
 	Long:  "",
 	Run: func(cmd *cobra.Command, args []string) {
-		token := viper.GetString("toggl.token")
-		if token == "" {
-			log.Fatal("Missing toggl.token in config file")
-		}
-
-		workspaceId := viper.GetInt("toggl.workspace_id")
-		if workspaceId == 0 {
-			log.Fatal("Missing toggl.workspace_id in config file")
-		}
-
+		token, workspaceId := utils.GetTogglConfig()
 		client := api.NewAPIClient(token)
 		timeEntries, err := client.GetHistory(nil, nil)
 		if err != nil {
@@ -36,27 +27,27 @@ var continueCmd = &cobra.Command{
 			return
 		}
 
-		latestEntry := timeEntries[0]
-		timeEntry := api.TimeEntry{
-			CreatedWith: "toggl-cli",
-			Description: latestEntry.Description,
-			Tags:        latestEntry.Tags,
-			Billable:    latestEntry.Billable,
-			WorkspaceID: workspaceId,
-			Duration:    -1,
-			Start:       time.Now().Format(time.RFC3339),
-			ProjectID:   latestEntry.ProjectID,
+		index, err := cmd.Flags().GetInt("index")
+		if err != nil {
+			log.Fatal("Error retrieving index flag:", err)
 		}
 
+		e := timeEntries[index]
+		timeEntry := client.NewTimeEntry(e.Description,
+			workspaceId,
+			e.ProjectID,
+			e.Billable,
+		)
 		_, err = client.CreateTimeEntry(workspaceId, timeEntry)
 		if err != nil {
 			log.Fatal("Failed to create time entry:", err)
 		}
 
-		fmt.Println("Continuing timer for:", latestEntry.Description)
+		fmt.Println("Continuing timer for:", e.Description)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(continueCmd)
+	continueCmd.Flags().IntP("index", "i", 0, "Index of the time entry to continue")
 }
