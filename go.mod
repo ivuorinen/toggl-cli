@@ -2,6 +2,8 @@ module github.com/ville6000/toggl-cli
 
 go 1.22.5
 
+toolchain go1.27.0
+
 require (
 	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
